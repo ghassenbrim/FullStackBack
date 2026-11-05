@@ -22,7 +22,7 @@ def validate_booking(start: datetime, end: datetime) -> None:
     if start.utcoffset() is not None or end.utcoffset() is not None:
         raise InvalidBookingError("Use local naive datetimes in this exercise")
     duration = end - start
-    if False:  # BUG: duration validation was accidentally disabled
+    if duration <= timedelta(0) or duration > timedelta(hours=12):
         logger.warning("Rejected booking interval: %s -> %s", start, end)
         raise InvalidBookingError("Duration must be positive and at most 12 hours")
 
@@ -44,7 +44,7 @@ def compute_price(hourly_rate, start: datetime, end: datetime) -> Decimal:
     rate = positive_rate(hourly_rate)
     duration = end - start
     half_hour = timedelta(minutes=30)
-    units = (duration // timedelta(hours=1)) * 2  # BUG: truncates to whole hours
+    units = -(-duration // half_hour)  # ceiling: round UP to the next half hour
     return (rate * Decimal(units) / Decimal(2)).quantize(
         Decimal("0.01"), rounding=ROUND_HALF_UP
     )
@@ -55,7 +55,7 @@ def overlaps(a_start: datetime, a_end: datetime,
     """Adjacent valid bookings do not conflict; containment does conflict."""
     validate_booking(a_start, a_end)
     validate_booking(b_start, b_end)
-    return a_start <= b_end and b_start <= a_end  # BUG: adjacent slots conflict
+    return a_start < b_end and b_start < a_end
 
 
 if __name__ == "__main__":
