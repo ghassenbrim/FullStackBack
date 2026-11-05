@@ -38,24 +38,49 @@ def home(request):
 
 @require_safe
 def location_list(request):
-    # TODO section 1: implement the documented response.
-    return HttpResponse("TODO: complete this view", status=501)
+    items = format_html_join(
+        "",
+        '<li><a href="{}">{}</a> - {}</li>',
+        (
+            (reverse("spaces:location_detail", kwargs={"code": code}),
+             location["city"], location["address"])
+            for code, location in LOCATIONS.items()
+        ),
+    )
+    return page("Locations", format_html("<ul>{}</ul>", items))
 
 
 @require_safe
 def location_detail(request, code):
-    # TODO section 1: implement the documented response.
-    return HttpResponse("TODO: complete this view", status=501)
+    location = get_location(code)
+    spaces = format_html_join(
+        "",
+        "<li>{} - {} EUR/hour</li>",
+        ((space["name"], space["hourly_rate"]) for space in location["spaces"]),
+    )
+    return page(location["city"], format_html(
+        "<p>{}</p><h2>Spaces</h2><ul>{}</ul>",
+        location["address"], spaces,
+    ))
 
 
 @require_safe
 def location_summary(request, code):
-    # TODO section 1: implement the documented response.
-    return HttpResponse("TODO: complete this view", status=501)
+    location = get_location(code)
+    return JsonResponse({
+        "code": code,
+        "city": location["city"],
+        "address": location["address"],
+        "spaces": location["spaces"],
+    })
 
 
 class AboutView(View):
     http_method_names = ["get", "head", "options"]
 
     def get(self, request):
-        return HttpResponse("TODO: complete AboutView.get", status=501)
+        return page("About DeskHive", format_html(
+            "<p>{}</p>",
+            "DeskHive is a fictional coworking company with locations "
+            "in Lyon, Lille and Barcelona.",
+        ))
