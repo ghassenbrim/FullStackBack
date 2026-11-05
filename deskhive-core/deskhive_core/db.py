@@ -120,8 +120,13 @@ class DeskHiveDatabase:
         return [self._space(row) for row in rows]
 
     def update_hourly_rate(self, space_id: int, hourly_rate) -> bool:
-        # TODO section 2: update_hourly_rate; see the documented contract.
-        raise NotImplementedError("Implement update_hourly_rate")
+        rate = positive_rate(hourly_rate)
+        with self.connection:
+            cursor = self.connection.execute(
+                "UPDATE spaces SET hourly_rate = ? WHERE id = ?",
+                (str(rate), space_id),
+            )
+        return cursor.rowcount == 1
 
     def delete_space(self, space_id: int) -> bool:
         """Booked spaces are protected by the FK: raises sqlite3.IntegrityError."""
@@ -136,8 +141,30 @@ class DeskHiveDatabase:
 
     def add_booking(self, space_id: int, member_email: str,
                     start: datetime, end: datetime) -> int:
-        # TODO section 2: add_booking; see the documented contract.
-        raise NotImplementedError("Implement add_booking")
+        validate_booking(start, end)
+        email = nonempty(member_email, "member_email")
+        local, _, domain = email.partition("@")
+        if (not local or "." not in domain or domain.startswith(".")
+                or domain.endswith(".") or any(c.isspace() for c in email)
+                or email.count("@") != 1):
+            raise ValueError("member_email must look like name@example.test")
+        if self.get_space(space_id) is None:
+            raise ValueError("Unknown space")
+        self.connection.execute("BEGIN IMMEDIATE")
+        try:
+            for existing in self.list_bookings(space_id):
+                if overlaps(start, end, existing.start, existing.end):
+                    raise BookingConflictError("Space already booked for this interval")
+            cursor = self.connection.execute(
+                "INSERT INTO bookings(space_id, member_email, start, end) "
+                "VALUES (?, ?, ?, ?)",
+                (space_id, email, start.isoformat(), end.isoformat()),
+            )
+            self.connection.commit()
+            return cursor.lastrowid
+        except BaseException:
+            self.connection.rollback()
+            raise
 
     def list_bookings(self, space_id: int) -> list[Booking]:
         rows = self.connection.execute(
@@ -146,5 +173,8 @@ class DeskHiveDatabase:
         return [self._booking(row) for row in rows]
 
     def cancel_booking(self, booking_id: int) -> bool:
-        # TODO section 2: cancel_booking; see the documented contract.
-        raise NotImplementedError("Implement cancel_booking")
+        with self.connection:
+            cursor = self.connection.execute(
+                "DELETE FROM bookings WHERE id = ?", (booking_id,)
+            )
+        return cursor.rowcount == 1
