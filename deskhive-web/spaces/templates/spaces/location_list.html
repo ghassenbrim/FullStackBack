@@ -1,5 +1,12 @@
 {% extends "base.html" %}
+{% block title %}Locations · {{ block.super }}{% endblock %}
 {% block content %}
-<h1>DeskHive template exercise</h1>
-{# TODO M4: use the supplied context, named URLs, loops and empty state. See M4-EXERCISES.md. #}
+<h1>Our locations</h1>
+<ul>
+{% for code, location in locations.items %}
+  <li><a href="{% url 'spaces:location_detail' code=code %}">{{ location.city }}</a> — {{ location.address }}</li>
+{% empty %}
+  <li>No locations available.</li>
+{% endfor %}
+</ul>
 {% endblock %}

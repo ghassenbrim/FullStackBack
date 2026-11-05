@@ -1,5 +1,15 @@
 {% extends "base.html" %}
+{% block title %}{{ location.city }} · {{ block.super }}{% endblock %}
 {% block content %}
-<h1>DeskHive template exercise</h1>
-{# TODO M4: use the supplied context, named URLs, loops and empty state. See M4-EXERCISES.md. #}
+<h1>{{ location.city }}</h1>
+<p>{{ location.address }}</p>
+<h2>{{ location.spaces|length }} space{{ location.spaces|length|pluralize }}</h2>
+<ul>
+{% for space in location.spaces %}
+  <li><strong>{{ space.name }}</strong> — {{ space.kind }}, capacity {{ space.capacity }}, EUR {{ space.hourly_rate }}/hour</li>
+{% empty %}
+  <li>No spaces available.</li>
+{% endfor %}
+</ul>
+<p><a href="{% url 'spaces:location_summary' code=code %}">JSON summary</a></p>
 {% endblock %}
